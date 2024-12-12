@@ -45,6 +45,8 @@ pub struct TimeslotData {
     pub color: String,
 }
 
+pub type StayID = i32;
+
 pub type KennelID = i32;
 pub type ColumnID = u32;
 

@@ -68,3 +68,12 @@ pub async fn get_stays_between(pool: &PgPool, start_date: NaiveDate, end_date: N
         start_date
     ).fetch_all(pool).await
 }
+
+pub async fn delete_stay(pool: &PgPool, stay_id: StayID) -> Result<()> {
+    query!(r"
+        DELETE FROM stays
+        WHERE id = $1",
+        stay_id
+    ).execute(pool).await?;
+    Ok(())
+}

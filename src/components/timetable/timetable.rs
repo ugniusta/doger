@@ -99,9 +99,8 @@ pub fn compute_layout(stays: &Vec<Stay>, kennels: &Vec<Kennel>, start_date: Naiv
 
 pub fn Timetable(props: TimetableProps) -> Element {
     let layout = (&*props.layout.read());
-    let kennels = (&*props.kennels.read());
 
-    if let (Some(layout), Some(_)) = (layout.as_ref(), kennels.as_ref()) {
+    if let Some(layout) = layout.as_ref() {
         let timeslot_data = &layout.timeslot_data;
         let mut kennel_column_counts = layout.column_counts
             .iter()
@@ -113,12 +112,9 @@ pub fn Timetable(props: TimetableProps) -> Element {
         kennel_column_counts.sort_by(|a, b| a.0.cmp(&b.0));
         let month_dates = generate_month_dates(start_date, end_date);
 
-        let layout = props.layout.map(move |v| v.as_ref().unwrap());
-        let kennels = props.kennels.map(move |v| v.as_ref().unwrap());
-
         rsx! {
-            table { class: "w-full table-fixed",
-
+            table { id: "timetable", class: "relative w-full table-fixed",
+                TimetableHeader { layout: props.layout, kennels: props.kennels }
                 for (year , month , dates) in month_dates {
                     tbody { "year-month": "{year}-{month}",
                         for date in dates {
@@ -155,21 +151,29 @@ pub fn Timetable(props: TimetableProps) -> Element {
 }
 
 #[component]
-fn TimetableHeader(layout: MappedSignal<TimetableLayout>, kennels: MappedSignal<Vec<Kennel>>) -> Element {
+fn TimetableHeader(layout: ReadOnlySignal<Option<TimetableLayout>>, kennels: ReadOnlySignal<Option<Vec<Kennel>>>) -> Element {
     let layout = &*layout.read();
     let kennels = &*kennels.read();
 
-    rsx! {
-        table { class: "w-full table-fixed",
+    if let (Some(layout), Some(kennels)) = (layout.as_ref(), kennels.as_ref()) {
+        rsx! {
             thead {
                 tr {
-                    th { class: "w-16 border border-blue-500 font-semibold", "Date" }
+                    th { class: "w-16 sticky top-0 border border-blue-500 bg-white font-semibold",
+                        "Date"
+                    }
                     for kennel in kennels.iter() {
-                        th { class: "border border-blue-500", colspan: { *(layout.column_counts.get(&kennel.id.unwrap()).unwrap()) }, {kennel.name.clone()} }
+                        th {
+                            class: "sticky top-0 border border-blue-500 bg-white",
+                            colspan: { *(layout.column_counts.get(&kennel.id.unwrap()).unwrap()) },
+                            {kennel.name.clone()}
+                        }
                     }
                 }
             }
         }
+    } else {
+        rsx! {  }
     }
 }
 

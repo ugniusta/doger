@@ -94,8 +94,12 @@ pub fn Home() -> Element {
                     }
                 }
                 div { class: "flex space-x-2 flex-nowrap",
-                    TextInput { value: filter_start, placeholder: "Start" }
-                    TextInput { value: filter_end, placeholder: "End" }
+                    div { class: "max-w-[100px]",
+                        TextInput { value: filter_start, placeholder: "Start" }
+                    }
+                    div { class: "max-w-[100px]",
+                        TextInput { value: filter_end, placeholder: "End" }
+                    }
                     Button1 {
                         text: "Filter",
                         onclick: move |_| {

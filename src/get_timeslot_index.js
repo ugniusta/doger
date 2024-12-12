@@ -1,4 +1,4 @@
-const table = document.querySelector('table')
+const table = document.getElementById('timetable')
 table.addEventListener('click', (event) => {
         const cell = event.target.closest('td[kennel_id][column]');
 

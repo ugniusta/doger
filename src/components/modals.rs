@@ -22,7 +22,7 @@ pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
     let mut resources = use_context::<Resources>();
     let mut status_messages = use_signal(|| None);
 
-    let mut dog_name = use_signal(|| "".to_owned());
+    let mut dog_name = use_signal(|| "1".to_owned()); // TODO - PLACEHOLDER
     let mut kennel_name = use_signal(|| "".to_owned());
     let mut start_date = use_signal(|| "".to_owned());
     let mut end_date = use_signal(|| "".to_owned());
@@ -60,13 +60,13 @@ pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
         let mut valid = true;
         let mut errors = Vec::new();
 
-        let dog_id = match i32::from_str(&*dog_name.read()) {
-            Ok(val) => Some(val),
-            Err(err) => {
-                errors.push("Invalid dog id".to_owned());
-                None
-            }
-        };
+        // let dog_id = match i32::from_str(&*dog_name.read()) {
+        //     Ok(val) => Some(val),
+        //     Err(err) => {
+        //         errors.push("Invalid dog id".to_owned());
+        //         None
+        //     }
+        // };
         let kennel_id = match i32::from_str(&*kennel_name.read()) {
             Ok(val) => Some(val),
             Err(err) => {
@@ -98,7 +98,8 @@ pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
         if errors.is_empty() {
             let stay = Stay {
                 id: None,
-                dog_id: dog_id.unwrap(),
+                // dog_id: dog_id.unwrap(),
+                dog_id: 1,
                 kennel_id: kennel_id.unwrap(),
                 start_date: start_date.unwrap(),
                 end_date: end_date.unwrap(),
@@ -107,7 +108,7 @@ pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
             match server_fns::insert_stay(stay).await {
                 Ok(_) => {
                     resources.fetch_stays.restart();
-                    props.onclose.call(());
+                    close_modal();
                 }
                 Err(_) => {
                     let message = format!("Error inserting stay: {:?}", "Database error :(");
@@ -125,10 +126,10 @@ pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
             class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center",
 
             div { class: "min-w-1/3 flex flex-col space-y-2 bg-white rounded px-4 py-4",
-                div {
-                    label { class: "block", "Dog" }
-                    TextInput { value: dog_name, placeholder: "Enter a dog ID" }
-                }
+                // div {
+                //     label { class: "block", "Dog" }
+                //     TextInput { value: dog_name, placeholder: "Enter a dog ID" }
+                // }
                 div {
                     label { class: "block", "Kennel" }
                     TextInput { value: kennel_name, placeholder: "Enter a kennel ID" }
@@ -147,7 +148,7 @@ pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
                 div {
                     if let Some(messages) = &*status_messages.read() {
                         for message in messages {
-                            p { class: "text-red-500", "{message}" }
+                            p { class: "text-red-500", "ⓧ {message}" }
                         }
                     }
                 }

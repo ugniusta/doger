@@ -44,3 +44,10 @@ pub async fn get_stays_between(start_date: NaiveDate, end_date: NaiveDate) -> Re
     Ok(stays)
 }
 
+#[server]
+pub async fn delete_stay(stay_id: StayID) -> Result<()> {
+    let FromContext(pool) = extract().await?;
+    database::delete_stay(&pool, stay_id).await?;
+    Ok(())
+}
+

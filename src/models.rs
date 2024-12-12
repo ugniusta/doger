@@ -42,13 +42,12 @@ pub struct Stay {
 #[derive(PartialEq, Eq, Clone, Debug, Serialize, Deserialize)]
 pub struct TimeslotData {
     pub stay_id: i32,
+    pub color: String,
 }
 
 pub type KennelID = i32;
 pub type ColumnID = u32;
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
-pub struct TimeslotIndex(pub NaiveDate, pub KennelID, pub ColumnID);
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct TimetableLayout {
     pub start_date: NaiveDate,
@@ -57,8 +56,19 @@ pub struct TimetableLayout {
     pub column_counts: HashMap<KennelID, u32>,
 }
 
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Serialize, Deserialize)]
+pub struct TimeslotIndex {
+    pub date: NaiveDate,
+    pub kennel_id: KennelID,
+    pub column: ColumnID,
+}
+
 impl From<(NaiveDate, KennelID, ColumnID)> for TimeslotIndex {
     fn from(value: (NaiveDate, KennelID, ColumnID)) -> Self {
-        TimeslotIndex(value.0, value.1, value.2)
+        TimeslotIndex {
+            date: value.0,
+            kennel_id: value.1,
+            column: value.2,
+        }
     }
 }

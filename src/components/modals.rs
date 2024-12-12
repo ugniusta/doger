@@ -1,111 +1,172 @@
 use std::collections::{HashSet};
-use std::rc::Rc;
+use std::str::FromStr;
+use chrono::NaiveDate;
+use dioxus::document::eval;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
-use crate::models::{Dog, Kennel, Stay};
+use crate::components::buttons::{Button1, Button2, Button3};
+use crate::components::input_fields::TextInput;
+use crate::components::pages::home::Resources;
+use crate::models::{Dog, Kennel, Stay, TimeslotIndex};
 use crate::server_fns;
-
-#[component]
-pub fn Button(show: bool, onclick: EventHandler<()>) -> Element {
-    rsx! {
-        button {
-            class: if !show { "hidden" },
-            class: "bg-green bg-opacity-50 fixed bottom-3 right-3",
-            onclick: move |_| onclick.call(()),
-            "+ Stay"
-        }
-    }
-}
 
 #[derive(Props, Clone, PartialEq)]
 pub struct StayRegistrationModalProps {
-    show: Signal<bool>,
+    onclose: EventHandler<()>,
     dogs: ReadOnlySignal<Option<Vec<Dog>>>,
     kennels: ReadOnlySignal<Option<Vec<Kennel>>>,
 }
 
 pub fn StayRegistrationModal(mut props: StayRegistrationModalProps) -> Element {
-    let mut status_message = use_signal(|| "".to_string());
+    let mut is_hidden = use_signal(|| false);
+    let mut resources = use_context::<Resources>();
+    let mut status_messages = use_signal(|| None);
 
-    let mut show = props.show;
-    let dogs = &*props.dogs.read();
-    let kennels = &*props.kennels.read();
+    let mut dog_name = use_signal(|| "".to_owned());
+    let mut kennel_name = use_signal(|| "".to_owned());
+    let mut start_date = use_signal(|| "".to_owned());
+    let mut end_date = use_signal(|| "".to_owned());
 
-    let mut dog_name = use_signal(|| "".to_string());
-    let mut kennel_name = use_signal(|| "".to_string());
-    let mut start_date = use_signal(|| "".to_string());
-    let mut end_date = use_signal(|| "".to_string());
+    let mut clear_data = move || {
+        dog_name.set("".to_owned());
+        kennel_name.set("".to_owned());
+        start_date.set("".to_owned());
+        end_date.set("".to_owned());
+        status_messages.set(None);
+    };
 
-    let set_dog_name = move |event: Event<FormData>| {
-        dog_name.set(event.value())
+    let mut close_modal = move || {
+        clear_data();
+        props.onclose.call(());
     };
-    let set_kennel_name = move |event: Event<FormData>| {
-        kennel_name.set(event.value())
+
+    async fn pick_date(mut date: Signal<String>) {
+        let timeslot_index = get_timeslot_index().await;
+        date.set(timeslot_index.date.to_string());
+    }
+
+    let pick_start_date = move |_| async move {
+        is_hidden.set(true);
+        pick_date(start_date).await;
+        is_hidden.set(false);
     };
-    let set_start_date = move |event: Event<FormData>| {
-        start_date.set(event.value())
+    let pick_end_date = move |_| async move {
+        is_hidden.set(true);
+        pick_date(end_date).await;
+        is_hidden.set(false);
     };
-    let set_end_date = move |event: Event<FormData>| {
-        end_date.set(event.value())
-    };
-    let add_stay = move |_| async move {
-        let dog_id = 1;
-        let kennel_id = 1;
-        let stay = Stay {
-            id: None,
-            dog_id,
-            kennel_id,
-            start_date: chrono::NaiveDate::from_ymd_opt(2024, 01, 01).unwrap(),
-            end_date: chrono::NaiveDate::from_ymd_opt(2024, 01, 05).unwrap(),
+
+    let add_stay = move || async move {
+        let mut valid = true;
+        let mut errors = Vec::new();
+
+        let dog_id = match i32::from_str(&*dog_name.read()) {
+            Ok(val) => Some(val),
+            Err(err) => {
+                errors.push("Invalid dog id".to_owned());
+                None
+            }
+        };
+        let kennel_id = match i32::from_str(&*kennel_name.read()) {
+            Ok(val) => Some(val),
+            Err(err) => {
+                errors.push("Invalid kennel id".to_owned());
+                None
+            }
+        };
+        let start_date = match NaiveDate::parse_from_str(&*start_date.read(), "%Y-%m-%d") {
+            Ok(val) => Some(val),
+            Err(err) => {
+                errors.push("Invalid start date".to_owned());
+                None
+            }
+        };
+        let end_date = match NaiveDate::parse_from_str(&*end_date.read(), "%Y-%m-%d") {
+            Ok(val) => Some(val),
+            Err(err) => {
+                errors.push("Invalid end date".to_owned());
+                None
+            }
         };
 
-        match server_fns::insert_stay(stay).await {
-            Ok(_) => status_message.set("Stay created successfully!".to_string()),
-            Err(e) => status_message.set(format!("Error inserting stay: {:?}", e)),
+        if let (Some(start_date), Some(end_date)) = (start_date, end_date) {
+            if start_date > end_date {
+                errors.push("End date must not be before start date".to_owned());
+            }
+        }
+
+        if errors.is_empty() {
+            let stay = Stay {
+                id: None,
+                dog_id: dog_id.unwrap(),
+                kennel_id: kennel_id.unwrap(),
+                start_date: start_date.unwrap(),
+                end_date: end_date.unwrap(),
+            };
+
+            match server_fns::insert_stay(stay).await {
+                Ok(_) => {
+                    resources.fetch_stays.restart();
+                    props.onclose.call(());
+                }
+                Err(_) => {
+                    let message = format!("Error inserting stay: {:?}", "Database error :(");
+                    status_messages.set(Some(vec![message]))
+                }
+            }
+        } else {
+            status_messages.set(Some(errors));
         }
     };
 
     rsx! {
         div {
-            class: if !show() { "hidden" },
+            class: if is_hidden() { "hidden" },
             class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center",
-            div { class: "flex flex-col space-y-2",
+
+            div { class: "min-w-1/3 flex flex-col space-y-2 bg-white rounded px-4 py-4",
                 div {
                     label { class: "block", "Dog" }
-                    input {
-                        list: "dog_input_suggestions",
-                        value: "{dog_name}",
-                        oninput: set_dog_name
-                    }
-                    datalist { id: "dog_input_suggestions",
-                        if let Some(dogs) = &*props.dogs.read() {
-                            for dog in dogs.iter() {
-                                option { value: "{dog.name}" }
-                            }
-                        }
-                    }
+                    TextInput { value: dog_name, placeholder: "Enter a dog ID" }
                 }
                 div {
                     label { class: "block", "Kennel" }
-                    input { value: "{kennel_name}", oninput: set_kennel_name }
+                    TextInput { value: kennel_name, placeholder: "Enter a kennel ID" }
                 }
                 div {
                     label { class: "block", "Start date" }
-                    input { value: "{start_date}", oninput: set_start_date }
+                    TextInput { value: start_date, placeholder: "Select or enter a start date" }
+                    button { onclick: pick_start_date, "SELECT" }
                 }
                 div {
                     label { class: "block", "End date" }
-                    input { value: "{end_date}", oninput: set_end_date }
-                }
-                div { class: "block text-right",
-                    button { class: "bg-white-500", onclick: add_stay, "Add" }
-                }
-                div { class: "block",
-                    button { onclick: move |_| show.set(false), "Close" }
+                    TextInput { value: end_date, placeholder: "Select or enter an end date" }
+                    button { onclick: pick_end_date, "SELECT" }
                 }
 
-                div { class: "block", "Status: {status_message()}" }
+                div {
+                    if let Some(messages) = &*status_messages.read() {
+                        for message in messages {
+                            p { class: "text-red-500", "{message}" }
+                        }
+                    }
+                }
+
+                div { class: "flex justify-between",
+                    div {
+                        Button1 { text: "Cancel", onclick: move |_| close_modal() }
+                    }
+                    div {
+                        Button2 { text: "Add", onclick: move |_| add_stay() }
+                    }
+                }
             }
         }
     }
 }
+
+pub async fn get_timeslot_index() -> TimeslotIndex {
+    let received = eval(include_str!("../get_timeslot_index.js")).recv().await;
+    serde_json::from_value(received.unwrap()).unwrap()
+}
+

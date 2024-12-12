@@ -1,5 +1,6 @@
 pub use self::timetable::Timetable;
+pub use self::timetable::compute_layout;
 
-pub mod timetable;
+mod timetable;
 mod timeslot;
 mod timeslot_selection;

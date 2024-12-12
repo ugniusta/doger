@@ -6,7 +6,6 @@ use serde::Deserialize;
 
 use crate::models::*;
 
-// use super::timeslot_selection::TimeslotSelection;
 
 #[derive(Props, PartialEq, Clone)]
 pub struct TimeslotProps {
@@ -15,28 +14,25 @@ pub struct TimeslotProps {
     data: Option<TimeslotData>,
 }
 
-// #[derive(Props, PartialEq, Clone)]
-// pub struct TimeslotId {
-//     pub stay_id: i32,
-// }
-
-// impl TimeslotId {
-//     fn to_css_id(&self) -> String {
-//         format!("{}-{}-{}-{}", self.year, self.month, self.day, self.stay_id)
-//     }
-// }
-
 pub fn Timeslot(mut props: TimeslotProps) -> Element {
-    rsx! {
-        td {
-            "kennel_id": "{props.kennel_id}",
-            "column": "{props.column}",
-            class: "hover:bg-blue-100 border border-gray-900",
-            // onclick: select_timeslot,
-            if let Some(data) = props.data {
+    let baseline_style = "border border-gray-900";
+    if let Some(data) = props.data {
+        rsx! {
+            td {
+                "kennel_id": "{props.kennel_id}",
+                "column": "{props.column}",
+                class: "{baseline_style}",
+                style: "background-color: {data.color}",
                 "{data.stay_id}"
-            } else {
-                "."
+            }
+        }
+    } else {
+        rsx! {
+            td {
+                "kennel_id": "{props.kennel_id}",
+                "column": "{props.column}",
+                class: "{baseline_style}",
+                ""
             }
         }
     }

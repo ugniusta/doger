@@ -1,10 +1,12 @@
 # Doger (Unfinished)
 ## A prototype web app for managing dog boarding
 
+[](https://github.com/user-attachments/assets/fea76227-aa4f-45ce-9c7d-39e1b0026c4f)
+
 ### Tech stack
 - Dioxus (Frontend/backend framework written in Rust)
 - PostgreSQL (Database)
-- Tailwing (CSS styling)
+- Tailwind (CSS styling)
 
 ### Features
 - Timetable view 🗓️
